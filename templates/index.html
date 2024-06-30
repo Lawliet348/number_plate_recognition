@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Number Plate Recognition</title>
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <meta name="theme-color" content="#4CAF50">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+
+<body>
+    <div class="container">
+        <h1>Number Plate Recognition</h1>
+        <div class="video-container">
+            <video id="videoFeed" autoplay></video>
+        </div>
+        <button id="captureBtn">Capture and Recognize</button>
+        <div id="result" style="display:none;">
+            <h2>Recognized Plate Text</h2>
+            <p id="plateText"></p>
+            <h2>ROI Image</h2>
+            <img id="roiImage" src="">
+        </div>
+    </div>
+
+    <script>
+        const video = document.getElementById('videoFeed');
+        const captureButton = document.getElementById('captureBtn');
+
+        // Function to start camera feed
+        async function startCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                video.srcObject = stream;
+            } catch (error) {
+                console.error('Error accessing the camera:', error);
+            }
+        }
+
+        // Capture button click event handler
+        captureButton.addEventListener('click', async () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const context = canvas.getContext('2d');
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // Get base64 data URL from canvas
+            const dataURL = canvas.toDataURL('image/jpeg');
+
+            // Send captured image to backend for processing
+            const response = await fetch('/capture', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ image: dataURL })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    // Redirect to results page with query parameters
+                    const url = new URL('/results', window.location.origin);
+                    url.searchParams.append('plate_text', data.plate_text);
+                    url.searchParams.append('roi_base64', data.roi_base64);
+                    window.location.href = url.toString();
+                }
+            } else {
+                alert('Error processing image.');
+            }
+        });
+
+        // Start camera feed when the page loads
+        startCamera();
+
+        // Stop camera feed when leaving the page
+        window.addEventListener('beforeunload', () => {
+            const stream = video.srcObject;
+            if (stream) {
+                const tracks = stream.getTracks();
+                tracks.forEach(track => track.stop());
+            }
+        });
+    </script>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('{{ url_for("static", filename="service-worker.js") }}')
+                    .then(registration => console.log('Service Worker registered'))
+                    .catch(error => console.error('Service Worker registration failed:', error));
+            });
+        }
+    </script>
+</body>
+
+</html>

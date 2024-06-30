@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Number Plate Recognition - Results</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <script>
+        // Function to redirect to the main page after 5 seconds
+        function redirectToMain() {
+            let countdown = 4;
+            const countdownElement = document.getElementById('countdown');
+            const interval = setInterval(() => {
+                countdownElement.innerText = countdown;
+                countdown--;
+                if (countdown < 0) {
+                    clearInterval(interval);
+                    window.location.href = "/";
+                }
+            }, 1000);
+        }
+    </script>
+</head>
+
+<body onload="redirectToMain()">
+    <div class="container">
+        <div id="result">
+            <h2>Recognized Plate Text</h2>
+            <p id="plateText">{{ plate_text }}</p>
+            <h2>Checked in!</h2>
+        </div>
+        <p>Redirecting in <span id="countdown">5</span> seconds...</p>
+    </div>
+</body>
+
+</html>
